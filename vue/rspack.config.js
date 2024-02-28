@@ -1,6 +1,8 @@
 const rspack = require('@rspack/core')
 const refreshPlugin = require('@rspack/plugin-react-refresh')
 const isDev = process.env.NODE_ENV === 'development'
+const {VueLoaderPlugin} = require('vue-loader');
+
 /**
  * @type {import('@rspack/cli').Configuration}
  */
@@ -11,13 +13,20 @@ module.exports = {
     },
     devServer: {
         historyApiFallback: true,
-        port: 8080,
+        port: 8082,
     },
     resolve: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
+        extensions: ['.js', '.ts', '.vue', '.json']
     },
     module: {
         rules: [
+            {
+                test: /\.vue$/,
+                loader: 'vue-loader',
+                options: {
+                    experimentalInlineMatchResource: true,
+                },
+            },
             {
                 test: /\.svg$/,
                 type: 'asset',
@@ -74,18 +83,19 @@ module.exports = {
         ],
     },
     plugins: [
+        new VueLoaderPlugin(),
         new rspack.container.ModuleFederationPlugin({
-            name: 'host',
+            name: 'vue',
             filename: 'remoteEntry.js',
-            remotes: {
-                remote: 'remote@http://localhost:8081/remoteEntry.js',
-                vue: 'vue@http://localhost:8082/remoteEntry.js',
+            exposes: {
+                './VueCard': './src/VueCard.vue',
             },
-            exposes: {},
             shared: {
-                react: {eager: true},
-                'react-dom': {eager: true},
-                'react-router-dom': {eager: true},
+                vue: {
+                    eager: true,
+                    singleton: true,
+                    requiredVersion: require('vue').version,
+                },
             },
         }),
         new rspack.DefinePlugin({
